@@ -47,10 +47,6 @@ func assertTrueF(t *testing.T, actual bool, descriptions ...string) {
 	fatalOnNonEmpty(t, validateEqual(actual, true, descriptions...))
 }
 
-func assertTrueE(t *testing.T, actual bool, descriptions ...string) {
-	errorOnNonEmpty(t, validateEqual(actual, true, descriptions...))
-}
-
 func assertFalseF(t *testing.T, actual bool, descriptions ...string) {
 	fatalOnNonEmpty(t, validateEqual(actual, false, descriptions...))
 }

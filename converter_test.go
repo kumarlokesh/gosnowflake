@@ -139,10 +139,9 @@ func TestGoTypeToSnowflake(t *testing.T) {
 }
 
 type tcSnowflakeTypeToGo struct {
-	in     snowflakeType
-	scale  int64
-	out    reflect.Type
-	fields []fieldMetadata
+	in    snowflakeType
+	scale int64
+	out   reflect.Type
 }
 
 func TestSnowflakeTypeToGo(t *testing.T) {
@@ -157,7 +156,6 @@ func TestSnowflakeTypeToGo(t *testing.T) {
 		{in: timestampNtzType, scale: 0, out: reflect.TypeOf(time.Now())},
 		{in: timestampTzType, scale: 0, out: reflect.TypeOf(time.Now())},
 		{in: objectType, scale: 0, out: reflect.TypeOf("")},
-		{in: objectType, scale: 0, fields: []fieldMetadata{{}}, out: reflect.TypeOf(ObjectType{})},
 		{in: variantType, scale: 0, out: reflect.TypeOf("")},
 		{in: arrayType, scale: 0, out: reflect.TypeOf("")},
 		{in: binaryType, scale: 0, out: reflect.TypeOf([]byte{})},
@@ -166,7 +164,7 @@ func TestSnowflakeTypeToGo(t *testing.T) {
 	}
 	for _, test := range testcases {
 		t.Run(fmt.Sprintf("%v_%v", test.in, test.out), func(t *testing.T) {
-			a := snowflakeTypeToGo(test.in, test.scale, test.fields)
+			a := snowflakeTypeToGo(test.in, test.scale)
 			if a != test.out {
 				t.Errorf("failed. in: %v, scale: %v, expected: %v, got: %v",
 					test.in, test.scale, test.out, a)
@@ -274,7 +272,7 @@ func TestStringToValue(t *testing.T) {
 			rowType = &execResponseRowType{
 				Type: tt,
 			}
-			if err = stringToValue(&dest, *rowType, &source, nil, nil); err == nil {
+			if err = stringToValue(&dest, *rowType, &source, nil); err == nil {
 				t.Errorf("should raise error. type: %v, value:%v", tt, source)
 			}
 		})
@@ -295,7 +293,7 @@ func TestStringToValue(t *testing.T) {
 				rowType = &execResponseRowType{
 					Type: tt,
 				}
-				if err = stringToValue(&dest, *rowType, &ss, nil, nil); err == nil {
+				if err = stringToValue(&dest, *rowType, &ss, nil); err == nil {
 					t.Errorf("should raise error. type: %v, value:%v", tt, source)
 				}
 			})
@@ -303,7 +301,7 @@ func TestStringToValue(t *testing.T) {
 	}
 
 	src := "1549491451.123456789"
-	if err = stringToValue(&dest, execResponseRowType{Type: "timestamp_ltz"}, &src, nil, nil); err != nil {
+	if err = stringToValue(&dest, execResponseRowType{Type: "timestamp_ltz"}, &src, nil); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	} else if ts, ok := dest.(time.Time); !ok {
 		t.Errorf("expected type: 'time.Time', got '%v'", reflect.TypeOf(dest))
@@ -343,7 +341,7 @@ func TestArrayToString(t *testing.T) {
 	}
 }
 
-func TestArrowToValues(t *testing.T) {
+func TestArrowToValue(t *testing.T) {
 	dest := make([]snowflakeValue, 2)
 
 	pool := memory.NewCheckedAllocator(memory.NewGoAllocator())
@@ -613,7 +611,7 @@ func TestArrowToValues(t *testing.T) {
 			compare: func(src interface{}, dst []snowflakeValue) int {
 				srcvs := src.([]int32)
 				for i := range srcvs {
-					if int64(srcvs[i]) != dst[i] {
+					if int64(srcvs[i]) != dst[i].(int64) {
 						return i
 					}
 				}
@@ -867,7 +865,7 @@ func TestArrowToValues(t *testing.T) {
 
 			withHigherPrecision := tc.higherPrecision
 
-			if err := arrowToValues(dest, meta, arr, localTime.Location(), withHigherPrecision, nil); err != nil { // TODO
+			if err := arrowToValue(dest, meta, arr, localTime.Location(), withHigherPrecision); err != nil {
 				t.Fatalf("error: %s", err)
 			}
 
@@ -2064,7 +2062,7 @@ func TestTimestampLTZLocation(t *testing.T) {
 		src := "1549491451.123456789"
 		var dest driver.Value
 		loc, _ := time.LoadLocation(PSTLocation)
-		if err := stringToValue(&dest, execResponseRowType{Type: "timestamp_ltz"}, &src, loc, nil); err != nil {
+		if err := stringToValue(&dest, execResponseRowType{Type: "timestamp_ltz"}, &src, loc); err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
 		ts, ok := dest.(time.Time)
@@ -2075,7 +2073,7 @@ func TestTimestampLTZLocation(t *testing.T) {
 			t.Errorf("expected location to be %v, got '%v'", loc, ts.Location())
 		}
 
-		if err := stringToValue(&dest, execResponseRowType{Type: "timestamp_ltz"}, &src, nil, nil); err != nil {
+		if err := stringToValue(&dest, execResponseRowType{Type: "timestamp_ltz"}, &src, nil); err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
 		ts, ok = dest.(time.Time)
